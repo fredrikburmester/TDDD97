@@ -1,27 +1,28 @@
+from flask_socketio import SocketIO, send, emit,join_room, leave_room
 from flask import Flask, jsonify,render_template,send_from_directory
+from flask import make_response
 from flask import request
 from random import *
-import database_handler
-import json
-from flask import make_response
 from gevent.pywsgi import WSGIServer
-from flask_socketio import SocketIO, send, emit,join_room, leave_room
-# from flask_sockets import Sockets
+
+import database_handler
+import os
+import json
 
 app = Flask(__name__, static_url_path='/static')
 
-import os
+# settings for uploading the app to Heroku
 ON_HEROKU = os.environ.get('ON_HEROKU')
 
 if ON_HEROKU:
-    # get the heroku port
-    port = 17995  # as per OP comments default is 17995
+    port = 17995  
 else:
     port = 5001
 
-# sockets = Sockets(app)
+# Initializing socketIO variable
 socketio = SocketIO(app)
 
+# using this class to get the email and token of the user in more convenient way
 class User(object):
     email = ""
     token = ""
@@ -30,18 +31,22 @@ class User(object):
         self.email = email
         self.token = token
 
+# after creating a user its email and token added to this array, stored in localStorage not the database
 LOGGED_IN_USERS = []
 
+# 
 @socketio.on('message')
 def handle_message(data):
     print(data['data'])
 
+# re-joins the user inside the room with the user-token name
 @socketio.on('subscribe')
-def handle_reconnect(data):
+def handle_reconnect(data): # token
     print("Reconnecting user in room...")
     print(data)
-    join_room(data)
-    
+    join_room(data) 
+
+# when user sign in, send 'logout' to the user logged in on other device. Then, add user to their room. 
 @socketio.on('login')
 def handle_login(data):
     token = data['data']
@@ -52,8 +57,8 @@ def handle_login(data):
     print("Saving user in room...")
     join_room(token)
         
-
-@app.route("/")
+# when user requests website (GET), send index.html to user
+@app.route("/", methods=["GET"])
 def root():
     response = make_response(render_template('index.html'))
     return response
@@ -73,6 +78,7 @@ def profile():
     response = make_response(render_template('index.html'))
     return response
 
+# creating a random unique token for the user
 def create_sign_in_token(email):
     letters = "abcdefghiklmnopqrstuvwwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
     token = "";
@@ -82,6 +88,7 @@ def create_sign_in_token(email):
     LOGGED_IN_USERS.append(user)
     return user
 
+# using the unique token to retrive the user's all information except the password from database
 def get_user_data(token):
     for i, user in enumerate(LOGGED_IN_USERS):
         if token == user.token:
@@ -90,6 +97,8 @@ def get_user_data(token):
             return user[0]
     return False
 
+# signing in the defined user in database. 
+# befor this, the user's information is saved through sign_up() 
 @app.route("/api/signin", methods=["POST"])
 def sign_in():
     data = request.get_json()
@@ -119,6 +128,8 @@ def sign_in():
                 return response
     return app.response_class(status=401)
 
+# saving the new user's information in the database
+# the email is unique key, so it os not allowed to save 2 users with the same email
 @app.route("/api/signup", methods=["POST"])
 def sign_up():
     data = request.get_json()
@@ -150,6 +161,7 @@ def sign_up():
 
     return app.response_class(status=401)
 
+# used in profile tab to change the user password
 @app.route("/api/updatepassword", methods=["POST"])
 def update_password():
     # Get from post message
@@ -171,6 +183,7 @@ def update_password():
 
     return app.response_class(status=401)
 
+# remove user from LOGGED_IN_USERS when the user signs out 
 @app.route("/api/signout", methods=["POST"])
 def sign_out():
     token = request.headers.get("Authorization")
@@ -182,6 +195,7 @@ def sign_out():
 
     return app.response_class(status=401)
 
+# get user information by the token 
 @app.route("/api/user-by-token/", methods=["POST"])
 def get_user_data_by_token():
     token = request.headers.get("Authorization")
@@ -195,6 +209,7 @@ def get_user_data_by_token():
         return response
     return app.response_class(status=401)
 
+# get any users information based on the email (requires the token)
 @app.route("/api/user-by-email", methods=["POST"])
 def get_user_data_by_email():
     data = request.get_json()
@@ -215,6 +230,7 @@ def get_user_data_by_email():
             return app.response_class(status=500) # no such user
     return app.response_class(status=401)
 
+# get all messages for a user based on token
 @app.route("/api/get-messages-by-token", methods=["POST"])
 def get_user_messages_by_token():
     token = request.headers.get("Authorization")
@@ -233,6 +249,7 @@ def get_user_messages_by_token():
             return app.response_class(status=204)
     return app.response_class(status=401)
 
+# get all messages for a user based on email
 @app.route("/api/get-messages-by-email", methods=["POST"])
 def get_user_messages_by_email():
     #email = request.args.get('email')
@@ -253,6 +270,7 @@ def get_user_messages_by_email():
             return app.response_class(status=204)
     return app.response_class(status=401)
 
+# post a message to a person based on email (requires token from author)
 @app.route("/api/post-message", methods=["POST"])
 def post_message():
     data = request.get_json()
@@ -270,6 +288,7 @@ def post_message():
             return app.response_class(status=500)
     return app.response_class(status=401)
 
+# if this function is run in main, start the server and start websockets server 
 if __name__ == "__main__":
     # app.run(host="192.168.0.102", port=5000, debug=True)
     from gevent import pywsgi
