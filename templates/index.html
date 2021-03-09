@@ -151,7 +151,7 @@
                         </div>
                         <form onsubmit="postMessage(this); return false;" id="postMessageForm">
                             <label for="message">Message text</label>
-                            <textarea class="form-control" name="message" id="message" cols="30" rows="10"></textarea>
+                            <textarea class="form-control" name="message" id="message2" cols="30" rows="10"></textarea>
                             <input class="btn btn-success my-2" type="submit" value="Post message">
                         </form>
                         <div id="browseMessages">
@@ -219,24 +219,27 @@
             socket.emit('subscribe', getLoggedInUserTokenEmail().token)
         })
 
-        page('/login', function(){
-            console.log("Going to /login...")
-            displayView('welcomeview')
-        });
-        page('/', function(){
-            console.log("Going to /...")
-            switchTab('home-panel')
-        });
-        page('/profile', function(){
-            console.log("browse")
-            switchTab('profile-panel')
-        });
-        page('/browse', function(){
-            switchTab('browse-panel')
-        });
+        // do this when the page loads
+        window.onload = function () {
+            page('/login', function () {
+                console.log("Going to /login...")
+                displayViewNew('login')
+            });
+            page('/', function () {
+                console.log("Going to /...")
+                displayViewNew('home')
+            });
+            page('/profile', function () {
+                console.log("Going to /profile...")
+                displayViewNew('profile')
+            });
+            page('/browse', function () {
+                console.log("Going to /browse...")
+                displayViewNew('browse')
+            });
 
-        page()
-        
+            page()
+        }
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js"
