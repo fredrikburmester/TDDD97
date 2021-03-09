@@ -1,8 +1,15 @@
+
+
 // get user token and email from logged in user
 function getLoggedInUserTokenEmail() {
     var currentUser = JSON.parse(localStorage.getItem("currentUser"));
-    if(currentUser === undefined) {
+
+    if(currentUser == null) {
         displayView('welcomeview')
+        return {
+            token: "",
+            email: ""
+        }
     }
 
     // return object
@@ -25,13 +32,27 @@ displayView = function (viewName) {
     //If the view is profile, set default panel
     if (viewName == 'profileview') {
         if (currentPanel == 'browse') { // needed for refresh 
-            switchTab('browse-panel')
-            displayUserWall(browseUser)
+            page('/browse')
+        } else if (currentPanel == 'profile') {
+            page('/profile')
         } else { // needed for refresh 
-            switchTab('home-panel')
-            displayUserWall(getLoggedInUserTokenEmail().email)
+            page('/')
         }
     }
+}
+
+function allowDrop(ev) {
+    ev.preventDefault();
+}
+
+function drag(ev) {
+    ev.dataTransfer.setData("text/plain", ev.target.id);
+}
+
+function drop(ev) {
+    ev.preventDefault();
+    var data = ev.dataTransfer.getData("text");
+    ev.target.value = document.getElementById(data).innerHTML;
 }
 
 // used in home and browse to show user content
@@ -40,10 +61,10 @@ function displayUserWall(email) {
     var token = getLoggedInUserTokenEmail().token
 
     if(currentPanel == 'browse'){
-    console.log(browseUser)
-        browseUser = email}
+        browseUser = email
+    }
     
-    if (email !== undefined && email.length > 0) {
+    if (email !== undefined && email.length > 0 && token.length > 0) {
         var xhr = new XMLHttpRequest();
         var json = {
             email: email
@@ -87,8 +108,11 @@ function displayUserWall(email) {
                             messages.innerHTML = ""
 
                             // go through all messages for the user
-                            returnData.forEach(message => {
+                            returnData.forEach((message,i) => {
                                 var p = document.createElement("p");
+                                p.id = i
+                                p.draggable = "true"
+                                p.addEventListener('dragstart', drag);
                                 p.innerText = message.message;
                                 messages.appendChild(p);
 
@@ -104,6 +128,8 @@ function displayUserWall(email) {
                     }
                 }
 
+            } else if (xhr.status == 401) {
+                forceLogout()
             } else if (xhr.status == 500) {
                 document.getElementById('postMessageForm').style.display = "none"
                 var messages = document.getElementById(currentPanel + 'Messages')
@@ -117,6 +143,7 @@ function displayUserWall(email) {
                 document.getElementById("browseInformation").style.display = "none"
                 document.getElementById('noUserFoundError').innerHTML = "No user found with that email"
             } else {
+                forceLogout()
                 console.log("Error")
             }
 
@@ -126,32 +153,36 @@ function displayUserWall(email) {
 
 // do this when the page loads
 window.onload = function () {
-    // If the user is logged in -> profile view. If not -> welcome view
-    if (localStorage.getItem("currentUser") === null) {
-        // redirect to the welcome screen
-        displayView('welcomeview')
-    } else {
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/user-by-email', true);
-        xhr.setRequestHeader("Authorization", getLoggedInUserTokenEmail().token)
-        xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
-        xhr.send(JSON.stringify({email: getLoggedInUserTokenEmail().email}));
-
-        xhr.onload = function (e) {
-            if(xhr.status != 200) {
-                forceLogout()
-            } else {
-                
-                // socket.on("disconnect", () => {
-                //     console.log("Server seems to be offline..."); // undefined
-                //     forceLogout()
-                // });
-                
-                displayView('profileview')
-            }
-        }
-    }
+    displayView('profileview')
 }
+
+// function isLoggedIn() {
+//     // If the user is logged in -> profile view. If not -> welcome view
+//     if (localStorage.getItem("currentUser") === null) {
+//         // redirect to the welcome screen
+//         displayView('welcomeview')
+//         console.log("Is logged out")
+//         return false
+//     } else {
+//         var xhr = new XMLHttpRequest();
+//         xhr.open('POST', '/api/user-by-email', true);
+//         xhr.setRequestHeader("Authorization", getLoggedInUserTokenEmail().token)
+//         xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+//         xhr.send(JSON.stringify({email: getLoggedInUserTokenEmail().email}));
+    
+//         xhr.onload = function (e) {
+//             if(xhr.status != 200) {
+//                 forceLogout()
+//                 console.log("Force log out")
+//                 return false
+//             } else {
+//                 console.log("Is logged in")
+//                 done = true
+//                 return true
+//             }
+//         }
+//     }
+// }
 
 function forceLogout() {
     socket.close()
@@ -291,6 +322,13 @@ function changePasswordValidation(form) {
 
 // switching panel based on tab click
 function switchTab(id) {
+
+    // if(!isLoggedIn()){
+    //     console.log("[2]")
+    //     page('/login')
+    //     return
+    // }
+
     // Hide all panels
     // HTLM collection -> array
     Array.from(document.getElementsByClassName('panel')).forEach(panel => {
@@ -331,11 +369,9 @@ function signOutValidation() {
 
     xhr.onload = function (e) {
         if (xhr.status == 204) {
-            
             socket.close()
-
             localStorage.removeItem('currentUser');
-            displayView('welcomeview')
+            page('/login')
             
             currentPanel = 'home'
             browseUser = ''
