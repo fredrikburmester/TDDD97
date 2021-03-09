@@ -43,7 +43,7 @@ input {
 @media only screen and (max-width: 1000px) {
     #form-area {
         grid-template-columns: 1fr;
-        grid-template-rows: 1fr auto auto;
+        grid-template-rows: 1fr auto;
         place-items: center;
         align-items: start;
         width: 100%;

@@ -1,6 +1,10 @@
+// browseUser is the email of whom we want to see their messages in the Brows-Tab
 var currentPanel = 'home'
 var browseUser = ''
 
+
+//decides which view should be shown to the client
+//calls the routing page from index.html to show the relavent URL
 function displayViewNew(view_name) {
     var view, dynamicContent
 
@@ -21,7 +25,7 @@ function displayViewNew(view_name) {
     }
 }
 
-// get user token and email from logged in user
+// get user's token and email from logged in user in the localStorage
 function getLoggedInUserTokenEmail() {
     var currentUser = JSON.parse(localStorage.getItem("currentUser"));
 
@@ -33,21 +37,24 @@ function getLoggedInUserTokenEmail() {
         }
     }
 
-    // return object
     return {
         token: currentUser.token,
         email: currentUser.email
     }
 }
 
+// to prevent the browser default handling of the event 
 function allowDrop(ev) {
     ev.preventDefault();
 }
 
+// when the element is dragged we get it's id
+// called from displayUserWall()
 function drag(ev) {
     ev.dataTransfer.setData("text/plain", ev.target.id);
 }
 
+// putting the dragged item content into the target place which is the text area here
 function drop(ev) {
     ev.preventDefault();
     var data = ev.dataTransfer.getData("text");
@@ -74,7 +81,7 @@ function displayUserWall(email) {
         xhr.send(JSON.stringify(json));
 
         xhr.onload = function (e) {
-            // if the user exists
+            // if the user exists, it's information and it's messages will be shown
             if (xhr.status == 200) {
                 let userData = JSON.parse(xhr.responseText)
                 document.getElementById('noUserFoundError').innerHTML = ""
@@ -108,6 +115,8 @@ function displayUserWall(email) {
                             messages.innerHTML = ""
 
                             // go through all messages for the user
+                            // also, the code related to drag/drop has been implemented here
+                            // the user can drag previous messages then drop into the text area to edit for new one
                             returnData.forEach((message,i) => {
                                 var p = document.createElement("p");
                                 p.id = i
@@ -122,12 +131,13 @@ function displayUserWall(email) {
                                 messages.appendChild(p);
                             });
                         }
+                    // in case of not having posted messages:
                     } else {
                         messages = document.getElementById(currentPanel + 'Messages')
                         messages.innerHTML = "No messages"
                     }
                 }
-
+            // in case of problems like not defined browseUser we show no information in the browse panel
             } else if (xhr.status == 500) {
                 document.getElementById('postMessageForm').style.display = "none"
                 messages = document.getElementById(currentPanel + 'Messages')
@@ -148,6 +158,7 @@ function displayUserWall(email) {
     }
 }
 
+// forcing logout if connection to the server is lost
 function forceLogout() {
     socket.close()
     localStorage.removeItem('currentUser');
@@ -185,6 +196,7 @@ function logInValidation(form) {
                 socket.open()
                 socket.emit('login', {"data": xhr.getResponseHeader("Authorization")});
                 page('/')
+                getLocation()
             } else {
                 document.getElementById('login-error').innerHTML = "Wrong email or password"
             }
@@ -245,6 +257,7 @@ function signUpValidation(form) {
     }
 }
 
+// validating the form before changing password in profile-tab
 function changePasswordValidation(form) {
     if (form.password.value.length > 7) {
         if (form.password.value == form.password2.value) {
@@ -332,6 +345,7 @@ function signOutValidation() {
     }
 }
 
+// posting message in home-panel or browse-panel
 function postMessage(form) {
     if (form.message.value.length > 0) {
         var token = getLoggedInUserTokenEmail().token
@@ -364,6 +378,38 @@ function postMessage(form) {
     }
 }
 
+// to refresh the current page
 function refreshPage() {
     page()
 }
+
+
+// Geolocation fun!!  -  not part of the project / not completed:) 
+
+// var position;
+// function getLocation() {
+//   if (navigator.geolocation) {
+//     navigator.geolocation.getCurrentPosition(function(p) {
+//         console.log(p)
+//         position = p
+
+//         let la = p.coords.latitude   
+//         let lo = p.coords.longitude   
+
+//         var xhr = new XMLHttpRequest();
+
+//         xhr.open('GET', `https://geocode.xyz/${la},${lo}?geoit=json`, true);
+//         xhr.send();
+
+//         xhr.onload = function (e) {
+//             if (xhr.status == 200) {
+//                 console.log(xhr.responseText)
+//             } else {
+//                 console.log(xhr.status)
+//             }
+//         }
+//     });
+//   } else {
+//     console.log("Not allowed")
+//   }
+// }

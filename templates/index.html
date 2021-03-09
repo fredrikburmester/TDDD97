@@ -201,13 +201,16 @@
     </div>
 
     <script>
+        // Initialize socketIO
         var socket = io();
 
+        // when user loggs out, send logout socket to server
         socket.on('logout', function () {
             console.log("log out");
             forceLogout()
         });
 
+        // when user connects, sent message to server 
         socket.on('connect', () => {
             console.log("Current socket id: ", socket.id);
             socket.emit('message', {
@@ -215,12 +218,15 @@
             })
         })
 
+        // subscribe to the room with user token name
         socket.on('reconnect', () => {
             socket.emit('subscribe', getLoggedInUserTokenEmail().token)
         })
 
         // do this when the page loads
         window.onload = function () {
+
+            // define the routes
             page('/login', function () {
                 console.log("Going to /login...")
                 displayViewNew('login')
@@ -238,6 +244,7 @@
                 displayViewNew('browse')
             });
 
+            // initialize PageJS
             page()
         }
     </script>
