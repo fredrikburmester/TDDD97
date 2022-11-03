@@ -1,4 +1,6 @@
 # TDDD97
+> If this helped you in any way, consider giving this repo a star 😄 ⭐️
+
 Web development course at Linköping Univerity. 
 
 ## Functions implemented
